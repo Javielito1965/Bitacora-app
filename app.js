@@ -10,7 +10,7 @@
   let profile = null;   // {id, nombre, rol}
   let clientes = [];
   let viajes = [];
-  let embarcacion = {nombre:'Mi Barco', horas_revision_motor:100};
+  let embarcacion = {nombre:'Mi Barco', horas_revision_motor:100, capacidad_deposito_litros:null, presupuesto_mensual:null};
 
   // ---------- helpers ----------
   const fmt = n => (isFinite(n) ? Number(n).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—');
@@ -149,15 +149,22 @@
   });
 
   // ---------- NAVEGACIÓN ----------
+  function switchView(name){
+    document.querySelectorAll('.sidebar-nav button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    const navBtn = document.querySelector(`.sidebar-nav button[data-view="${name}"]`);
+    if(navBtn) navBtn.classList.add('active');
+    $('view-'+name).classList.add('active');
+    if(name === 'informes') renderInformes();
+    if(name === 'configuracion') renderConfiguracion();
+    if(name === 'panel') renderPanel();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
   document.querySelectorAll('.sidebar-nav button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      document.querySelectorAll('.sidebar-nav button').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      $('view-'+b.dataset.view).classList.add('active');
-      if(b.dataset.view === 'informes') renderInformes();
-      if(b.dataset.view === 'configuracion') renderConfiguracion();
-    });
+    b.addEventListener('click', ()=>switchView(b.dataset.view));
+  });
+  document.querySelectorAll('[data-view-link]').forEach(b=>{
+    b.addEventListener('click', ()=>switchView(b.dataset.viewLink));
   });
   $('logoutBtn').addEventListener('click', signOut);
 
@@ -257,6 +264,7 @@
       });
       await loadViajes();
       renderHistorial();
+      renderPanel();
       showToast(editingId ? 'Viaje actualizado' : 'Viaje guardado');
       resetTripForm();
     }catch(err){
@@ -293,6 +301,7 @@
       await withAuthRetry(()=>api(`/rest/v1/viajes?id=eq.${id}`, {method:'DELETE'}));
       await loadViajes();
       renderHistorial();
+      renderPanel();
       showToast('Viaje eliminado');
     }catch(err){
       showToast('Error al eliminar: ' + err.message);
@@ -463,14 +472,150 @@
       </div>`).join('') : '<div class="empty">Todavía no hay datos suficientes.</div>';
   }
 
+  // ---------- PANEL (dashboard con diafragmas) ----------
+  function polar(cx,cy,r,angleDeg){
+    const a = angleDeg*Math.PI/180;
+    return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)};
+  }
+  const GAUGE_ARC_PATH = 'M24.64 95.36 A50 50 0 1 1 95.36 95.36';
+  function renderGaugeSVG({percent, colorClass, centerNum, centerUnit}){
+    const p = Math.max(0, Math.min(100, isFinite(percent) ? percent : 0));
+    let ticks = '';
+    for(let i=0;i<=10;i++){
+      const angle = 135 + i*27;
+      const p1 = polar(60,60,44,angle);
+      const p2 = polar(60,60,50,angle);
+      ticks += `<line class="gauge-tick" x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}"/>`;
+    }
+    return `<svg class="gauge-svg" viewBox="0 0 120 120">
+      <g>${ticks}</g>
+      <path class="gauge-track" pathLength="100" d="${GAUGE_ARC_PATH}"></path>
+      <path class="gauge-value-arc ${colorClass}" pathLength="100" stroke-dasharray="${p.toFixed(1)} ${(100-p).toFixed(1)}" d="${GAUGE_ARC_PATH}"></path>
+      <text x="60" y="63" text-anchor="middle" class="gauge-center-num">${escapeHtml(centerNum)}</text>
+      <text x="60" y="76" text-anchor="middle" class="gauge-center-unit">${escapeHtml(centerUnit)}</text>
+    </svg>`;
+  }
+
+  function ultimoViajeOrdenado(){
+    return [...viajes].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''))[0];
+  }
+
+  function renderPanel(){
+    $('panelGreeting').textContent = embarcacion.nombre ? `Estado de ${embarcacion.nombre}` : 'Estado de la embarcación';
+    const ultimo = ultimoViajeOrdenado();
+
+    // Diafragma 1: horas de motor hasta la próxima revisión
+    let totalMotor = 0;
+    viajes.forEach(v=>{ if(v.motor_ini!=null && v.motor_fin!=null) totalMotor += (Number(v.motor_fin)-Number(v.motor_ini)); });
+    const umbral = embarcacion.horas_revision_motor;
+    let g1;
+    if(umbral && umbral > 0){
+      const dentro = totalMotor % umbral;
+      const pct = (dentro/umbral)*100;
+      const restante = umbral - dentro;
+      g1 = {
+        svg: renderGaugeSVG({percent:pct, colorClass: pct>=85?'danger':'brass', centerNum:fmt(dentro), centerUnit:'H DESDE REV.'}),
+        label:'Motor · próxima revisión',
+        sub:`${fmt(restante)} h para la revisión`,
+        noData:false
+      };
+    } else {
+      g1 = {
+        svg: renderGaugeSVG({percent:0, colorClass:'brass', centerNum:fmt(totalMotor), centerUnit:'H TOTALES'}),
+        label:'Motor · horas totales',
+        sub:'Configura el aviso de revisión en Configuración',
+        noData:true
+      };
+    }
+
+    // Diafragma 2: combustible respecto a la capacidad del depósito
+    const ultimoNivel = ultimo ? ultimo.comb_fin : null;
+    let g2;
+    if(embarcacion.capacidad_deposito_litros > 0 && ultimoNivel != null){
+      const pct = (Number(ultimoNivel)/Number(embarcacion.capacidad_deposito_litros))*100;
+      g2 = {
+        svg: renderGaugeSVG({percent:pct, colorClass: pct<20?'danger':'teal', centerNum:Math.round(Math.max(0,Math.min(100,pct)))+'%', centerUnit:fmt(ultimoNivel)+' L'}),
+        label:'Combustible',
+        sub:`de ${fmt(embarcacion.capacidad_deposito_litros)} L de capacidad`,
+        noData:false
+      };
+    } else {
+      g2 = {
+        svg: renderGaugeSVG({percent:0, colorClass:'teal', centerNum:'—', centerUnit:'L'}),
+        label:'Combustible',
+        sub: !embarcacion.capacidad_deposito_litros ? 'Indica la capacidad del depósito en Configuración' : 'Registra un viaje para ver el nivel',
+        noData:true
+      };
+    }
+
+    // Diafragma 3: gasto del mes respecto al presupuesto
+    const mesActual = new Date().toISOString().slice(0,7);
+    let costeMes = 0;
+    viajes.filter(v=>(v.fecha||'').startsWith(mesActual)).forEach(v=>{
+      const s = computeStats({motorIni:v.motor_ini,motorFin:v.motor_fin,genIni:v.gen_ini,genFin:v.gen_fin,combIni:v.comb_ini,combFin:v.comb_fin,precioLitro:v.precio_litro});
+      if(isFinite(s.coste)) costeMes += s.coste;
+    });
+    let g3;
+    if(embarcacion.presupuesto_mensual > 0){
+      const pct = (costeMes/Number(embarcacion.presupuesto_mensual))*100;
+      g3 = {
+        svg: renderGaugeSVG({percent:pct, colorClass: pct>=90?'danger':'brass', centerNum:Math.round(pct)+'%', centerUnit:'DEL PRESUP.'}),
+        label:'Presupuesto del mes',
+        sub:`${fmtMoney(costeMes)} de ${fmtMoney(embarcacion.presupuesto_mensual)}`,
+        noData:false
+      };
+    } else {
+      g3 = {
+        svg: renderGaugeSVG({percent:0, colorClass:'brass', centerNum:fmtMoney(costeMes), centerUnit:''}),
+        label:'Gasto del mes',
+        sub:'Fija un presupuesto en Configuración para ver el indicador',
+        noData:true
+      };
+    }
+
+    $('gaugeCluster').innerHTML = [g1,g2,g3].map(g=>`
+      <div class="gauge ${g.noData?'no-data':''}">
+        ${g.svg}
+        <div class="gauge-label">${escapeHtml(g.label)}</div>
+        <div class="gauge-sub">${escapeHtml(g.sub)}</div>
+      </div>`).join('');
+
+    const cont = $('recentTripContainer');
+    if(!ultimo){
+      cont.innerHTML = '<div class="empty">⚓<br>Todavía no hay ninguna salida registrada.</div>';
+    } else {
+      const s = computeStats({motorIni:ultimo.motor_ini,motorFin:ultimo.motor_fin,genIni:ultimo.gen_ini,genFin:ultimo.gen_fin,combIni:ultimo.comb_ini,combFin:ultimo.comb_fin,precioLitro:ultimo.precio_litro});
+      cont.innerHTML = `
+        <div class="entry" style="margin-bottom:0;">
+          <div class="entry-top">
+            <div>
+              <span class="entry-date">${formatDate(ultimo.fecha)}</span> ·
+              <span class="entry-client">${escapeHtml(clientName(ultimo.cliente_id))}</span>
+              ${ultimo.motivo ? `<div class="entry-motivo">${escapeHtml(ultimo.motivo)}</div>` : ''}
+            </div>
+          </div>
+          <div class="entry-grid">
+            <div class="stat"><div class="stat-label">Horas motor</div><div class="stat-value">${fmt(s.motor)} h</div></div>
+            <div class="stat"><div class="stat-label">Horas generador</div><div class="stat-value">${fmt(s.gen)} h</div></div>
+            <div class="stat"><div class="stat-label">Consumo</div><div class="stat-value">${fmt(s.consumo)} L</div></div>
+            <div class="stat"><div class="stat-label">Coste</div><div class="stat-value coste">${fmtMoney(s.coste)}</div></div>
+          </div>
+        </div>`;
+    }
+  }
+
   // ---------- CONFIGURACIÓN ----------
   async function renderConfiguracion(){
     $('cfgBoatName').value = embarcacion.nombre || '';
     $('cfgHorasRevision').value = embarcacion.horas_revision_motor ?? '';
+    $('cfgCapacidadDeposito').value = embarcacion.capacidad_deposito_litros ?? '';
+    $('cfgPresupuestoMensual').value = embarcacion.presupuesto_mensual ?? '';
     const isAdmin = profile && (profile.rol === 'admin' || profile.rol === 'capitan');
     $('cfgBoatSaveBtn').style.display = isAdmin ? 'inline-block' : 'none';
     $('cfgBoatName').disabled = !isAdmin;
     $('cfgHorasRevision').disabled = !isAdmin;
+    $('cfgCapacidadDeposito').disabled = !isAdmin;
+    $('cfgPresupuestoMensual').disabled = !isAdmin;
 
     $('cfgMiNombre').value = profile?.nombre || '';
     $('cfgMiRol').textContent = profile?.rol || '';
@@ -511,13 +656,16 @@
   $('cfgBoatForm').addEventListener('submit', async e=>{
     e.preventDefault();
     try{
-      await withAuthRetry(()=>api('/rest/v1/embarcacion?id=eq.1', {method:'PATCH', body:{
+      const payload = {
         nombre: $('cfgBoatName').value.trim(),
-        horas_revision_motor: $('cfgHorasRevision').value ? Number($('cfgHorasRevision').value) : null
-      }}));
-      embarcacion.nombre = $('cfgBoatName').value.trim();
-      embarcacion.horas_revision_motor = $('cfgHorasRevision').value ? Number($('cfgHorasRevision').value) : null;
+        horas_revision_motor: $('cfgHorasRevision').value ? Number($('cfgHorasRevision').value) : null,
+        capacidad_deposito_litros: $('cfgCapacidadDeposito').value ? Number($('cfgCapacidadDeposito').value) : null,
+        presupuesto_mensual: $('cfgPresupuestoMensual').value ? Number($('cfgPresupuestoMensual').value) : null
+      };
+      await withAuthRetry(()=>api('/rest/v1/embarcacion?id=eq.1', {method:'PATCH', body:payload}));
+      Object.assign(embarcacion, payload);
       $('sidebarBoatName').textContent = embarcacion.nombre;
+      renderPanel();
       showToast('Datos de la embarcación actualizados');
     }catch(err){ showToast('Error: '+err.message); }
   });
@@ -541,6 +689,7 @@
       resetTripForm();
       renderClientes();
       renderHistorial();
+      renderPanel();
     }catch(err){
       authError('No se pudo cargar la sesión: ' + err.message);
       clearSession();
