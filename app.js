@@ -121,7 +121,7 @@
   function authError(msg){ $('authError').textContent = msg; $('authError').classList.add('show'); $('authMsg').classList.remove('show'); }
   function authMsg(msg){ $('authMsg').textContent = msg; $('authMsg').classList.add('show'); $('authError').classList.remove('show'); }
 
-  $('loginForm').addEventListener('submit', async e=>{
+  $('form-login').addEventListener('submit', async e=>{
     e.preventDefault();
     hideAuthMsgs();
     const btn = $('loginBtn');
@@ -134,7 +134,7 @@
     }finally{ btn.disabled = false; }
   });
 
-  $('signupForm').addEventListener('submit', async e=>{
+  $('form-signup').addEventListener('submit', async e=>{
     e.preventDefault();
     hideAuthMsgs();
     const btn = $('signupBtn');
@@ -142,7 +142,7 @@
     try{
       await signUp($('signupEmail').value.trim(), $('signupPassword').value, $('signupNombre').value.trim());
       authMsg('Cuenta creada. Si tu proyecto requiere confirmación por email, revisa tu correo antes de iniciar sesión.');
-      $('signupForm').reset();
+      $('form-signup').reset();
     }catch(err){
       authError(err.message || 'No se pudo crear la cuenta');
     }finally{ btn.disabled = false; }
