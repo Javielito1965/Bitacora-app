@@ -264,3 +264,14 @@ button.ghost:hover{border-color:var(--brass);color:var(--brass-bright);}
 .maint-alert button:hover{opacity:1;}
 .maint-alert.level-warn{background:var(--brass-dim);border-color:rgba(201,161,92,.4);color:var(--brass-bright);}
 .maint-alert.level-danger{background:var(--danger-dim);border-color:rgba(210,102,74,.4);color:#EE9276;}
+
+/* Logo / emblema */
+.auth-emblem{
+  width:64px;height:64px;border-radius:50%;display:block;margin:0 auto 14px;
+  object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.4);border:2px solid var(--brass-dim);
+}
+.sidebar-brand-row{display:flex;align-items:center;gap:12px;}
+.brand-emblem{
+  width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;
+  border:1.5px solid var(--brass-dim);
+}
