@@ -325,7 +325,21 @@
   // ---------- HISTORIAL ----------
   function renderHistorial(){
     populateFilterCliente();
+    populateFilterMes();
     applyHistorialFilters();
+  }
+  const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function populateFilterMes(){
+    const sel = $('filterMes');
+    const current = sel.value;
+    const meses = [...new Set(viajes.map(v=>(v.fecha||'').slice(0,7)).filter(Boolean))].sort().reverse();
+    sel.innerHTML = '<option value="">Todos los meses</option>' +
+      meses.map(m=>{
+        const [y,mm] = m.split('-');
+        const label = `${MESES_ES[Number(mm)-1]} ${y}`;
+        return `<option value="${m}">${label.charAt(0).toUpperCase()+label.slice(1)}</option>`;
+      }).join('');
+    if(current) sel.value = current;
   }
   function populateFilterCliente(){
     const sel = $('filterCliente');
