@@ -169,7 +169,7 @@
   $('logoutBtn').addEventListener('click', signOut);
 
   // ---------- NUEVO VIAJE / EDICIÓN ----------
-  const tripFields = ['tFecha','tCliente','tMotivo','tMotorIni','tMotorFin','tGenIni','tGenFin','tCombIni','tCombFin','tPrecio'];
+  const tripFields = ['tFecha','tCliente','tMotivo','tMillas','tEstadoMar','tRpmProm','tVelProm','tMotorIni','tMotorFin','tGenIni','tGenFin','tCombIni','tCombFin','tPrecio'];
   let editingId = null;
 
   function populateClienteSelect(){
@@ -202,6 +202,10 @@
       fecha: $('tFecha').value,
       clienteId: $('tCliente').value,
       motivo: $('tMotivo').value.trim(),
+      millas: $('tMillas').value,
+      estadoMar: $('tEstadoMar').value,
+      rpmProm: $('tRpmProm').value,
+      velProm: $('tVelProm').value,
       motorIni: $('tMotorIni').value,
       motorFin: $('tMotorFin').value,
       genIni: $('tGenIni').value,
@@ -243,6 +247,10 @@
       fecha: v.fecha,
       cliente_id: v.clienteId,
       motivo: v.motivo || null,
+      millas_navegadas: v.millas === '' ? null : Number(v.millas),
+      estado_mar: v.estadoMar || null,
+      rpm_promedio: v.rpmProm === '' ? null : Number(v.rpmProm),
+      velocidad_promedio: v.velProm === '' ? null : Number(v.velProm),
       motor_ini: v.motorIni === '' ? null : Number(v.motorIni),
       motor_fin: v.motorFin === '' ? null : Number(v.motorFin),
       gen_ini: v.genIni === '' ? null : Number(v.genIni),
@@ -265,6 +273,7 @@
       await loadViajes();
       renderHistorial();
       renderPanel();
+      checkMaintAlert();
       showToast(editingId ? 'Viaje actualizado' : 'Viaje guardado');
       resetTripForm();
     }catch(err){
@@ -280,6 +289,10 @@
     populateClienteSelect();
     $('tCliente').value = v.cliente_id || '';
     $('tMotivo').value = v.motivo || '';
+    $('tMillas').value = v.millas_navegadas ?? '';
+    $('tEstadoMar').value = v.estado_mar || '';
+    $('tRpmProm').value = v.rpm_promedio ?? '';
+    $('tVelProm').value = v.velocidad_promedio ?? '';
     $('tMotorIni').value = v.motor_ini ?? '';
     $('tMotorFin').value = v.motor_fin ?? '';
     $('tGenIni').value = v.gen_ini ?? '';
@@ -302,6 +315,7 @@
       await loadViajes();
       renderHistorial();
       renderPanel();
+      checkMaintAlert();
       showToast('Viaje eliminado');
     }catch(err){
       showToast('Error al eliminar: ' + err.message);
@@ -361,6 +375,10 @@
           </div>
         </div>
         <div class="entry-grid">
+          <div class="stat"><div class="stat-label">Millas</div><div class="stat-value">${v.millas_navegadas!=null?fmt(v.millas_navegadas)+' nm':'—'}</div></div>
+          <div class="stat"><div class="stat-label">Estado de la mar</div><div class="stat-value" style="font-size:13px;">${v.estado_mar?escapeHtml(v.estado_mar):'—'}</div></div>
+          <div class="stat"><div class="stat-label">RPM promedio</div><div class="stat-value">${v.rpm_promedio!=null?fmt(v.rpm_promedio):'—'}</div></div>
+          <div class="stat"><div class="stat-label">Velocidad promedio</div><div class="stat-value">${v.velocidad_promedio!=null?fmt(v.velocidad_promedio)+' kn':'—'}</div></div>
           <div class="stat"><div class="stat-label">Horas motor</div><div class="stat-value">${fmt(stats.motor)} h</div></div>
           <div class="stat"><div class="stat-label">Horas generador</div><div class="stat-value">${fmt(stats.gen)} h</div></div>
           <div class="stat"><div class="stat-label">Consumo</div><div class="stat-value ${stats.consumo<0?'warn':''}">${fmt(stats.consumo)} L</div></div>
@@ -472,6 +490,38 @@
       </div>`).join('') : '<div class="empty">Todavía no hay datos suficientes.</div>';
   }
 
+  function motorHoursStatus(){
+    let totalMotor = 0;
+    viajes.forEach(v=>{ if(v.motor_ini!=null && v.motor_fin!=null) totalMotor += (Number(v.motor_fin)-Number(v.motor_ini)); });
+    const umbral = embarcacion.horas_revision_motor;
+    if(!umbral || umbral <= 0) return {totalMotor, umbral:null, dentro:null, restante:null, pct:null};
+    const dentro = totalMotor % umbral;
+    const restante = umbral - dentro;
+    const pct = (dentro/umbral)*100;
+    return {totalMotor, umbral, dentro, restante, pct};
+  }
+
+  let alertDismissedFor = null; // guarda el nivel ya descartado en esta sesión
+  function checkMaintAlert(){
+    const s = motorHoursStatus();
+    const banner = $('maintAlertBanner');
+    if(s.umbral == null){ banner.innerHTML = ''; return; }
+    let level = null;
+    if(s.pct >= 100) level = 'danger';
+    else if(s.pct >= 85) level = 'warn';
+    if(!level || alertDismissedFor === level){ if(!level) banner.innerHTML=''; return; }
+    const msg = level === 'danger'
+      ? `<strong>Revisión de motor pendiente.</strong> Se han superado las ${fmt(s.umbral)} h desde la última revisión (${fmt(s.dentro)} h acumuladas).`
+      : `<strong>Revisión de motor próxima.</strong> Quedan ${fmt(s.restante)} h antes de alcanzar el aviso de las ${fmt(s.umbral)} h.`;
+    banner.innerHTML = `
+      <div class="maint-alert level-${level}">
+        <span class="icon">${level === 'danger' ? '⚠️' : '🔧'}</span>
+        <span class="msg">${msg}</span>
+        <button type="button" id="dismissMaintAlert" title="Descartar">✕</button>
+      </div>`;
+    $('dismissMaintAlert').addEventListener('click', ()=>{ alertDismissedFor = level; banner.innerHTML=''; });
+  }
+
   // ---------- PANEL (dashboard con diafragmas) ----------
   function polar(cx,cy,r,angleDeg){
     const a = angleDeg*Math.PI/180;
@@ -505,23 +555,18 @@
     const ultimo = ultimoViajeOrdenado();
 
     // Diafragma 1: horas de motor hasta la próxima revisión
-    let totalMotor = 0;
-    viajes.forEach(v=>{ if(v.motor_ini!=null && v.motor_fin!=null) totalMotor += (Number(v.motor_fin)-Number(v.motor_ini)); });
-    const umbral = embarcacion.horas_revision_motor;
+    const ms = motorHoursStatus();
     let g1;
-    if(umbral && umbral > 0){
-      const dentro = totalMotor % umbral;
-      const pct = (dentro/umbral)*100;
-      const restante = umbral - dentro;
+    if(ms.umbral != null){
       g1 = {
-        svg: renderGaugeSVG({percent:pct, colorClass: pct>=85?'danger':'brass', centerNum:fmt(dentro), centerUnit:'H DESDE REV.'}),
+        svg: renderGaugeSVG({percent:ms.pct, colorClass: ms.pct>=85?'danger':'brass', centerNum:fmt(ms.dentro), centerUnit:'H DESDE REV.'}),
         label:'Motor · próxima revisión',
-        sub:`${fmt(restante)} h para la revisión`,
+        sub:`${fmt(ms.restante)} h para la revisión`,
         noData:false
       };
     } else {
       g1 = {
-        svg: renderGaugeSVG({percent:0, colorClass:'brass', centerNum:fmt(totalMotor), centerUnit:'H TOTALES'}),
+        svg: renderGaugeSVG({percent:0, colorClass:'brass', centerNum:fmt(ms.totalMotor), centerUnit:'H TOTALES'}),
         label:'Motor · horas totales',
         sub:'Configura el aviso de revisión en Configuración',
         noData:true
@@ -595,9 +640,9 @@
             </div>
           </div>
           <div class="entry-grid">
+            <div class="stat"><div class="stat-label">Millas</div><div class="stat-value">${ultimo.millas_navegadas!=null?fmt(ultimo.millas_navegadas)+' nm':'—'}</div></div>
+            <div class="stat"><div class="stat-label">Estado de la mar</div><div class="stat-value" style="font-size:13px;">${ultimo.estado_mar?escapeHtml(ultimo.estado_mar):'—'}</div></div>
             <div class="stat"><div class="stat-label">Horas motor</div><div class="stat-value">${fmt(s.motor)} h</div></div>
-            <div class="stat"><div class="stat-label">Horas generador</div><div class="stat-value">${fmt(s.gen)} h</div></div>
-            <div class="stat"><div class="stat-label">Consumo</div><div class="stat-value">${fmt(s.consumo)} L</div></div>
             <div class="stat"><div class="stat-label">Coste</div><div class="stat-value coste">${fmtMoney(s.coste)}</div></div>
           </div>
         </div>`;
@@ -666,6 +711,8 @@
       Object.assign(embarcacion, payload);
       $('sidebarBoatName').textContent = embarcacion.nombre;
       renderPanel();
+      alertDismissedFor = null;
+      checkMaintAlert();
       showToast('Datos de la embarcación actualizados');
     }catch(err){ showToast('Error: '+err.message); }
   });
@@ -690,6 +737,7 @@
       renderClientes();
       renderHistorial();
       renderPanel();
+      checkMaintAlert();
     }catch(err){
       authError('No se pudo cargar la sesión: ' + err.message);
       clearSession();
