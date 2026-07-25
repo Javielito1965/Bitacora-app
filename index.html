@@ -199,6 +199,8 @@
       <div class="filters">
         <select id="filterCliente"><option value="">Todos los clientes</option></select>
         <input type="month" id="filterMes">
+        <button class="ghost" type="button" id="btnExportExcel">⬇ Exportar Excel</button>
+        <button class="ghost" type="button" id="btnExportPdf">⬇ Exportar PDF</button>
       </div>
       <div id="entriesContainer"></div>
     </section>
@@ -273,6 +275,9 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>

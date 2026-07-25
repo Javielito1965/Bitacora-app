@@ -337,16 +337,76 @@
   $('filterCliente').addEventListener('change', applyHistorialFilters);
   $('filterMes').addEventListener('change', applyHistorialFilters);
 
-  function applyHistorialFilters(){
+  function filteredViajes(){
     const cli = $('filterCliente').value;
     const mes = $('filterMes').value; // YYYY-MM
     let list = viajes;
     if(cli) list = list.filter(v=>v.cliente_id === cli);
     if(mes) list = list.filter(v=>(v.fecha||'').startsWith(mes));
-    renderEntries(list);
+    return [...list].sort((a,b)=> (a.fecha||'').localeCompare(b.fecha||''));
+  }
+
+  function applyHistorialFilters(){
+    renderEntries([...filteredViajes()].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'')));
   }
 
   const canDelete = () => profile && (profile.rol === 'capitan' || profile.rol === 'admin');
+
+  // ---------- EXPORTAR ----------
+  const EXPORT_HEADERS = ['Fecha','Cliente','Motivo','Millas (nm)','Estado de la mar','RPM promedio','Velocidad (kn)','Horas motor','Horas generador','Consumo (L)','Precio (€/L)','Coste (€)'];
+
+  function exportRows(){
+    return filteredViajes().map(v=>{
+      const s = computeStats({motorIni:v.motor_ini,motorFin:v.motor_fin,genIni:v.gen_ini,genFin:v.gen_fin,combIni:v.comb_ini,combFin:v.comb_fin,precioLitro:v.precio_litro});
+      return [
+        formatDate(v.fecha),
+        clientName(v.cliente_id),
+        v.motivo || '',
+        v.millas_navegadas ?? '',
+        v.estado_mar || '',
+        v.rpm_promedio ?? '',
+        v.velocidad_promedio ?? '',
+        isFinite(s.motor) ? Number(s.motor.toFixed(2)) : '',
+        isFinite(s.gen) ? Number(s.gen.toFixed(2)) : '',
+        isFinite(s.consumo) ? Number(s.consumo.toFixed(2)) : '',
+        v.precio_litro ?? '',
+        isFinite(s.coste) ? Number(s.coste.toFixed(2)) : ''
+      ];
+    });
+  }
+
+  $('btnExportExcel').addEventListener('click', ()=>{
+    const rows = exportRows();
+    if(rows.length === 0){ showToast('No hay viajes que exportar con este filtro'); return; }
+    const ws = XLSX.utils.aoa_to_sheet([EXPORT_HEADERS, ...rows]);
+    ws['!cols'] = EXPORT_HEADERS.map(()=>({wch:16}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+    XLSX.writeFile(wb, `bitacora-${(embarcacion.nombre||'barco').replace(/\s+/g,'_')}.xlsx`);
+  });
+
+  $('btnExportPdf').addEventListener('click', ()=>{
+    const rows = exportRows();
+    if(rows.length === 0){ showToast('No hay viajes que exportar con este filtro'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+    doc.setFontSize(14);
+    doc.text(`Cuaderno de bitácora — ${embarcacion.nombre || 'Mi Barco'}`, 30, 32);
+    doc.setFontSize(9);
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')}`, 30, 46);
+    doc.autoTable({
+      head: [EXPORT_HEADERS],
+      body: rows,
+      startY: 58,
+      styles: {fontSize:7.5, cellPadding:4},
+      headStyles: {fillColor:[20,25,32], textColor:[237,231,218]},
+      alternateRowStyles: {fillColor:[245,245,245]},
+      margin: {left:30, right:30}
+    });
+    doc.save(`bitacora-${(embarcacion.nombre||'barco').replace(/\s+/g,'_')}.pdf`);
+  });
+
+
 
   function renderEntries(list){
     const cont = $('entriesContainer');
