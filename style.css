@@ -173,7 +173,7 @@ button.ghost:hover{border-color:var(--brass);color:var(--brass-bright);}
 .bar-fill{background:linear-gradient(90deg,var(--brass),var(--brass-bright));height:100%;border-radius:6px;}
 .bar-value{font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:right;color:var(--ink-dim);}
 
-/* ConfiguraciÃ³n */
+/* Configuración */
 .user-row{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--steel-line);border-radius:8px;padding:11px 14px;margin-bottom:8px;}
 .user-row select{padding:6px 8px;border:1px solid var(--steel-line);border-radius:6px;font-size:12.5px;background:var(--panel-raised);color:var(--ink);}
 
@@ -248,3 +248,19 @@ button.ghost:hover{border-color:var(--brass);color:var(--brass-bright);}
   .panel-lower{grid-template-columns:1fr;}
   .gauge-svg{width:150px;height:150px;}
 }
+
+/* Banda de alerta de mantenimiento */
+.maint-alert{
+  display:flex;align-items:center;gap:12px;padding:13px 18px;border-radius:10px;
+  margin-bottom:20px;font-size:13.5px;border:1px solid transparent;
+}
+.maint-alert .icon{font-size:16px;flex-shrink:0;}
+.maint-alert .msg{flex:1;}
+.maint-alert .msg strong{font-weight:600;}
+.maint-alert button{
+  flex-shrink:0;border:none;background:transparent;cursor:pointer;font-size:16px;line-height:1;
+  padding:2px 6px;border-radius:6px;opacity:.7;
+}
+.maint-alert button:hover{opacity:1;}
+.maint-alert.level-warn{background:var(--brass-dim);border-color:rgba(201,161,92,.4);color:var(--brass-bright);}
+.maint-alert.level-danger{background:var(--danger-dim);border-color:rgba(210,102,74,.4);color:#EE9276;}
