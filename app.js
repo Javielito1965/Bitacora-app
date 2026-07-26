@@ -225,6 +225,26 @@
   }
   tripFields.forEach(f=>$(f).addEventListener('input', updateLiveCalc));
 
+  function applyCombIniInheritance(){
+    const anterior = ultimoViajeOrdenado();
+    const hint = $('combIniHint');
+    const input = $('tCombIni');
+    if(anterior && anterior.comb_fin != null){
+      input.value = anterior.comb_fin;
+      input.disabled = true;
+      hint.innerHTML = `Heredado del fin del viaje del ${formatDate(anterior.fecha)} (${fmt(anterior.comb_fin)} L). <a href="#" id="combIniOverrideLink">¿Repostaste o es distinto? Editar a mano</a>`;
+      $('combIniOverrideLink').addEventListener('click', (e)=>{
+        e.preventDefault();
+        input.disabled = false;
+        input.focus();
+        hint.textContent = 'Editando a mano — normalmente este valor debería coincidir con el fin del viaje anterior.';
+      });
+    } else {
+      input.disabled = false;
+      hint.textContent = 'Es tu primer viaje registrado: indica el nivel real del depósito.';
+    }
+  }
+
   function resetTripForm(){
     editingId = null;
     tripFields.forEach(f=>$(f).value = '');
@@ -233,6 +253,7 @@
     $('tripFormTitle').textContent = 'Nuevo viaje';
     $('tripSubmitBtn').textContent = 'Guardar viaje';
     $('tripCancelEdit').style.display = 'none';
+    applyCombIniInheritance();
     updateLiveCalc();
   }
   $('tripCancelEdit').addEventListener('click', resetTripForm);
@@ -297,6 +318,8 @@
     $('tMotorFin').value = v.motor_fin ?? '';
     $('tGenIni').value = v.gen_ini ?? '';
     $('tGenFin').value = v.gen_fin ?? '';
+    $('tCombIni').disabled = false;
+    $('combIniHint').textContent = 'Editando un viaje existente — normalmente este valor debería coincidir con el fin del viaje anterior en la fecha.';
     $('tCombIni').value = v.comb_ini ?? '';
     $('tCombFin').value = v.comb_fin ?? '';
     $('tPrecio').value = v.precio_litro ?? '';
