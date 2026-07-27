@@ -79,6 +79,7 @@
     <nav class="sidebar-nav">
       <button class="active" data-view="panel">◎ Panel</button>
       <button data-view="nuevo-viaje">⛵ Nuevo viaje</button>
+      <button data-view="repostajes">⛽ Repostajes</button>
       <button data-view="historial">📖 Historial</button>
       <button data-view="clientes">👥 Clientes</button>
       <button data-view="informes">📊 Informes</button>
@@ -187,7 +188,7 @@
           <div class="field">
             <label>Precio del combustible (€/litro)</label>
             <input type="number" step="0.001" id="tPrecio" placeholder="Precio de hoy">
-            <div class="hint">Se guarda el precio de ese día, así el histórico no cambia si el precio sube o baja.</div>
+            <div class="hint" id="precioHint">Se guarda el precio de ese día, así el histórico no cambia si el precio sube o baja.</div>
           </div>
 
           <div class="live-calc">
@@ -203,6 +204,34 @@
           </div>
         </form>
       </div>
+    </section>
+
+    <!-- REPOSTAJES -->
+    <section class="view" id="view-repostajes">
+      <div class="section-head">
+        <div>
+          <h2>Repostajes</h2>
+          <p>El precio del último repostaje se usa automáticamente en los próximos viajes</p>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <form id="repostajeForm">
+          <div class="row2">
+            <div class="field"><label>Fecha de repostaje</label><input type="date" id="rFecha" required></div>
+            <div class="field"><label>Lugar</label><input type="text" id="rLugar" placeholder="Ej. Puerto de Sotogrande"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Litros al repostar (antes)</label><input type="number" step="0.1" id="rLitrosAntes" placeholder="Nivel antes de repostar"></div>
+            <div class="field"><label>Litros al finalizar el repostaje</label><input type="number" step="0.1" id="rLitrosDespues" placeholder="Nivel tras repostar" required></div>
+          </div>
+          <div class="field">
+            <label>Precio del litro (€)</label>
+            <input type="number" step="0.001" id="rPrecio" placeholder="Ej. 1,45" required>
+          </div>
+          <button class="primary" type="submit" id="repostajeSubmitBtn">Guardar repostaje</button>
+        </form>
+      </div>
+      <div id="repostajesContainer"></div>
     </section>
 
     <!-- HISTORIAL -->

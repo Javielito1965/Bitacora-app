@@ -10,6 +10,7 @@
   let profile = null;   // {id, nombre, rol}
   let clientes = [];
   let viajes = [];
+  let repostajes = [];
   let embarcacion = {nombre:'Mi Barco', horas_revision_motor:100, capacidad_deposito_litros:null, presupuesto_mensual:null};
 
   // ---------- helpers ----------
@@ -88,6 +89,9 @@
   async function loadViajes(){
     viajes = await api('/rest/v1/viajes?select=*&order=fecha.desc') || [];
   }
+  async function loadRepostajes(){
+    repostajes = await api('/rest/v1/repostajes?select=*&order=fecha.desc') || [];
+  }
   async function loadEmbarcacion(){
     const rows = await api('/rest/v1/embarcacion?select=*&id=eq.1');
     if(rows && rows[0]) embarcacion = rows[0];
@@ -158,6 +162,8 @@
     if(name === 'informes') renderInformes();
     if(name === 'configuracion') renderConfiguracion();
     if(name === 'panel') renderPanel();
+    if(name === 'repostajes') renderRepostajes();
+    if(name === 'nuevo-viaje' && editingId === null){ applyCombIniInheritance(); applyPrecioInheritance(); }
     window.scrollTo({top:0, behavior:'smooth'});
   }
   document.querySelectorAll('.sidebar-nav button').forEach(b=>{
@@ -225,23 +231,62 @@
   }
   tripFields.forEach(f=>$(f).addEventListener('input', updateLiveCalc));
 
+  function ultimoRepostaje(){
+    return [...repostajes].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''))[0];
+  }
+
+  function ultimoEventoCombustible(){
+    const uv = ultimoViajeOrdenadoSafe();
+    const ur = ultimoRepostaje();
+    const candidatos = [];
+    if(uv && uv.comb_fin != null) candidatos.push({fecha:uv.fecha, created_at:uv.created_at, litros:uv.comb_fin, detalle:`fin del viaje del ${formatDate(uv.fecha)}`});
+    if(ur && ur.litros_despues != null) candidatos.push({fecha:ur.fecha, created_at:ur.created_at, litros:ur.litros_despues, detalle:`repostaje del ${formatDate(ur.fecha)}${ur.lugar?' en '+ur.lugar:''}`});
+    if(candidatos.length === 0) return null;
+    candidatos.sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''));
+    return candidatos[0];
+  }
+  // alias seguro: viajes puede no estar cargado todavía la primera vez que se llama
+  function ultimoViajeOrdenadoSafe(){
+    return (typeof viajes !== 'undefined') ? [...viajes].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''))[0] : null;
+  }
+
   function applyCombIniInheritance(){
-    const anterior = ultimoViajeOrdenado();
+    const evento = ultimoEventoCombustible();
     const hint = $('combIniHint');
     const input = $('tCombIni');
-    if(anterior && anterior.comb_fin != null){
-      input.value = anterior.comb_fin;
+    if(evento){
+      input.value = evento.litros;
       input.disabled = true;
-      hint.innerHTML = `Heredado del fin del viaje del ${formatDate(anterior.fecha)} (${fmt(anterior.comb_fin)} L). <a href="#" id="combIniOverrideLink">¿Repostaste o es distinto? Editar a mano</a>`;
+      hint.innerHTML = `Heredado del ${escapeHtml(evento.detalle)} (${fmt(evento.litros)} L). <a href="#" id="combIniOverrideLink">¿Cifra distinta? Editar a mano</a>`;
       $('combIniOverrideLink').addEventListener('click', (e)=>{
         e.preventDefault();
         input.disabled = false;
         input.focus();
-        hint.textContent = 'Editando a mano — normalmente este valor debería coincidir con el fin del viaje anterior.';
+        hint.textContent = 'Editando a mano — normalmente este valor debería coincidir con el último viaje o repostaje.';
       });
     } else {
       input.disabled = false;
-      hint.textContent = 'Es tu primer viaje registrado: indica el nivel real del depósito.';
+      hint.textContent = 'Todavía no hay datos previos: indica el nivel real del depósito.';
+    }
+  }
+
+  function applyPrecioInheritance(){
+    const ur = ultimoRepostaje();
+    const hint = $('precioHint');
+    const input = $('tPrecio');
+    if(ur && ur.precio_litro != null){
+      input.value = ur.precio_litro;
+      input.disabled = true;
+      hint.innerHTML = `Precio del repostaje del ${formatDate(ur.fecha)}${ur.lugar?' en '+escapeHtml(ur.lugar):''}: ${fmtMoney(ur.precio_litro)}. <a href="#" id="precioOverrideLink">Usar otro precio</a>`;
+      $('precioOverrideLink').addEventListener('click', (e)=>{
+        e.preventDefault();
+        input.disabled = false;
+        input.focus();
+        hint.textContent = 'Editando el precio a mano para este viaje.';
+      });
+    } else {
+      input.disabled = false;
+      hint.textContent = 'Todavía no hay ningún repostaje registrado: indica el precio actual.';
     }
   }
 
@@ -249,11 +294,11 @@
     editingId = null;
     tripFields.forEach(f=>$(f).value = '');
     $('tFecha').value = new Date().toISOString().slice(0,10);
-    $('tPrecio').value = embarcacion.ultimo_precio || '';
     $('tripFormTitle').textContent = 'Nuevo viaje';
     $('tripSubmitBtn').textContent = 'Guardar viaje';
     $('tripCancelEdit').style.display = 'none';
     applyCombIniInheritance();
+    applyPrecioInheritance();
     updateLiveCalc();
   }
   $('tripCancelEdit').addEventListener('click', resetTripForm);
@@ -322,6 +367,8 @@
     $('combIniHint').textContent = 'Editando un viaje existente — normalmente este valor debería coincidir con el fin del viaje anterior en la fecha.';
     $('tCombIni').value = v.comb_ini ?? '';
     $('tCombFin').value = v.comb_fin ?? '';
+    $('tPrecio').disabled = false;
+    $('precioHint').textContent = 'Editando un viaje existente.';
     $('tPrecio').value = v.precio_litro ?? '';
     $('tripFormTitle').textContent = 'Editar viaje';
     $('tripSubmitBtn').textContent = 'Actualizar viaje';
@@ -344,6 +391,114 @@
       showToast('Error al eliminar: ' + err.message);
     }
   }
+
+  // ---------- REPOSTAJES ----------
+  let editingRepostajeId = null;
+
+  function resetRepostajeForm(){
+    editingRepostajeId = null;
+    $('rFecha').value = new Date().toISOString().slice(0,10);
+    $('rLugar').value = '';
+    $('rLitrosAntes').value = '';
+    $('rLitrosDespues').value = '';
+    $('rPrecio').value = '';
+    $('repostajeSubmitBtn').textContent = 'Guardar repostaje';
+  }
+
+  function renderRepostajes(){
+    const cont = $('repostajesContainer');
+    cont.innerHTML = '';
+    if(repostajes.length === 0){
+      cont.innerHTML = '<div class="empty">⛽<br>Todavía no hay ningún repostaje registrado.</div>';
+      return;
+    }
+    repostajes.forEach(r=>{
+      const card = document.createElement('div');
+      card.className = 'entry';
+      card.innerHTML = `
+        <div class="entry-top">
+          <div>
+            <span class="entry-date">${formatDate(r.fecha)}</span> ·
+            <span class="entry-client">${escapeHtml(r.lugar || 'Sin lugar indicado')}</span>
+          </div>
+          <div class="entry-actions">
+            <button class="icon-btn" data-edit="${r.id}">✎ Editar</button>
+            ${canDelete() ? `<button class="icon-btn danger" data-del="${r.id}">🗑 Eliminar</button>` : ''}
+          </div>
+        </div>
+        <div class="entry-grid">
+          <div class="stat"><div class="stat-label">Litros antes</div><div class="stat-value">${r.litros_antes!=null?fmt(r.litros_antes)+' L':'—'}</div></div>
+          <div class="stat"><div class="stat-label">Litros después</div><div class="stat-value">${r.litros_despues!=null?fmt(r.litros_despues)+' L':'—'}</div></div>
+          <div class="stat"><div class="stat-label">Litros repostados</div><div class="stat-value">${(r.litros_antes!=null && r.litros_despues!=null)?fmt(r.litros_despues-r.litros_antes)+' L':'—'}</div></div>
+          <div class="stat"><div class="stat-label">Precio / total</div><div class="stat-value coste">${r.precio_litro!=null?fmtMoney(r.precio_litro)+'/L':'—'}${(r.litros_antes!=null && r.litros_despues!=null && r.precio_litro!=null)?' · '+fmtMoney((r.litros_despues-r.litros_antes)*r.precio_litro):''}</div></div>
+        </div>`;
+      cont.appendChild(card);
+    });
+    cont.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>editRepostaje(b.dataset.edit)));
+    cont.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>deleteRepostaje(b.dataset.del)));
+  }
+
+  function editRepostaje(id){
+    const r = repostajes.find(x=>x.id === id);
+    if(!r) return;
+    editingRepostajeId = id;
+    $('rFecha').value = r.fecha || '';
+    $('rLugar').value = r.lugar || '';
+    $('rLitrosAntes').value = r.litros_antes ?? '';
+    $('rLitrosDespues').value = r.litros_despues ?? '';
+    $('rPrecio').value = r.precio_litro ?? '';
+    $('repostajeSubmitBtn').textContent = 'Actualizar repostaje';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  async function deleteRepostaje(id){
+    if(!confirm('¿Eliminar este repostaje? Esta acción no se puede deshacer.')) return;
+    try{
+      await withAuthRetry(()=>api(`/rest/v1/repostajes?id=eq.${id}`, {method:'DELETE'}));
+      await loadRepostajes();
+      renderRepostajes();
+      renderPanel();
+      if(editingId === null) { applyCombIniInheritance(); applyPrecioInheritance(); }
+      showToast('Repostaje eliminado');
+    }catch(err){ showToast('Error: '+err.message); }
+  }
+
+  $('repostajeForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fecha = $('rFecha').value;
+    const litrosDespues = $('rLitrosDespues').value;
+    const precio = $('rPrecio').value;
+    if(!fecha){ showToast('Indica la fecha del repostaje'); return; }
+    if(litrosDespues === ''){ showToast('Indica los litros al finalizar el repostaje'); return; }
+    if(precio === ''){ showToast('Indica el precio del litro'); return; }
+    const payload = {
+      fecha,
+      lugar: $('rLugar').value.trim() || null,
+      litros_antes: $('rLitrosAntes').value === '' ? null : Number($('rLitrosAntes').value),
+      litros_despues: Number(litrosDespues),
+      precio_litro: Number(precio)
+    };
+    const btn = $('repostajeSubmitBtn');
+    btn.disabled = true;
+    try{
+      await withAuthRetry(async ()=>{
+        if(editingRepostajeId){
+          await api(`/rest/v1/repostajes?id=eq.${editingRepostajeId}`, {method:'PATCH', body:payload, extraHeaders:restHeaders});
+        } else {
+          payload.created_by = session.user.id;
+          await api('/rest/v1/repostajes', {method:'POST', body:payload, extraHeaders:restHeaders});
+        }
+      });
+      await loadRepostajes();
+      renderRepostajes();
+      renderPanel();
+      if(editingId === null){ applyCombIniInheritance(); applyPrecioInheritance(); }
+      showToast(editingRepostajeId ? 'Repostaje actualizado' : 'Repostaje guardado');
+      resetRepostajeForm();
+    }catch(err){
+      showToast('Error al guardar: ' + err.message);
+    }finally{ btn.disabled = false; }
+  });
 
   // ---------- HISTORIAL ----------
   function renderHistorial(){
@@ -671,14 +826,15 @@
     }
 
     // Diafragma 2: combustible respecto a la capacidad del depósito
-    const ultimoNivel = ultimo ? ultimo.comb_fin : null;
+    const eventoComb = ultimoEventoCombustible();
+    const ultimoNivel = eventoComb ? eventoComb.litros : null;
     let g2;
     if(embarcacion.capacidad_deposito_litros > 0 && ultimoNivel != null){
       const pct = (Number(ultimoNivel)/Number(embarcacion.capacidad_deposito_litros))*100;
       g2 = {
         svg: renderGaugeSVG({percent:pct, colorClass: pct<20?'danger':'teal', centerNum:Math.round(Math.max(0,Math.min(100,pct)))+'%', centerUnit:fmt(ultimoNivel)+' L'}),
         label:'Combustible',
-        sub:`de ${fmt(embarcacion.capacidad_deposito_litros)} L de capacidad`,
+        sub:`de ${fmt(embarcacion.capacidad_deposito_litros)} L · según ${eventoComb.detalle}`,
         noData:false
       };
     } else {
@@ -825,7 +981,7 @@
   async function bootApp(){
     try{
       await loadProfile();
-      await Promise.all([loadClientes(), loadViajes(), loadEmbarcacion()]);
+      await Promise.all([loadClientes(), loadViajes(), loadEmbarcacion(), loadRepostajes()]);
       $('authScreen').style.display = 'none';
       $('appScreen').classList.add('active');
       $('sidebarBoatName').textContent = embarcacion.nombre || 'Mi Barco';
@@ -835,6 +991,8 @@
       renderHistorial();
       renderPanel();
       checkMaintAlert();
+      resetRepostajeForm();
+      renderRepostajes();
     }catch(err){
       authError('No se pudo cargar la sesión: ' + err.message);
       clearSession();
