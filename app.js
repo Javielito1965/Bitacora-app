@@ -634,7 +634,7 @@
           <div>
             <span class="entry-date">${formatDate(v.fecha)}</span> ·
             <span class="entry-client">${escapeHtml(clientName(v.cliente_id))}</span>
-            ${wasEdited(v) ? `<span class="edited-badge" title="${formatDateTime(v.updated_at)}">✏️ Editado</span>` : ''}
+            ${wasEdited(v) ? `asi?<span class="edited-badge">✏️ Editado ${formatDateTime(v.updated_at)}</span>` : ''}
             ${v.motivo ? `<div class="entry-motivo">${escapeHtml(v.motivo)}</div>` : ''}
           </div>
           <div class="entry-actions">
@@ -906,7 +906,7 @@
               <span class="entry-date">${formatDate(ultimo.fecha)}</span> ·
               <span class="entry-client">${escapeHtml(clientName(ultimo.cliente_id))}</span>
               ${ultimo.motivo ? `<div class="entry-motivo">${escapeHtml(ultimo.motivo)}</div>` : ''}
-              ${wasEdited(ultimo) ? `<span class="edited-badge" title="${formatDateTime(ultimo.updated_at)}">✏️ Editado</span>` : ''}
+              ${wasEdited(ultimo) ? `<span class="edited-badge">✏️ Editado ${formatDateTime(ultimo.updated_at)}</span>` : ''}
             </div>
           </div>
           <div class="entry-grid">
