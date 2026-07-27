@@ -275,3 +275,11 @@ button.ghost:hover{border-color:var(--brass);color:var(--brass-bright);}
   width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;
   border:1.5px solid var(--brass-dim);
 }
+
+
+/* Badge de "editado" en cada viaje */
+.edited-badge{
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.04em;
+  background:var(--teal-dim);color:var(--teal-bright);padding:2px 9px;border-radius:999px;
+  margin-left:8px;vertical-align:middle;cursor:default;
+}

@@ -22,6 +22,16 @@
     const [y,m,d] = iso.split('-');
     return `${d}/${m}/${y}`;
   }
+  function formatDateTime(iso){
+    if(!iso) return '';
+    const d = new Date(iso);
+    if(isNaN(d)) return '';
+    return d.toLocaleDateString('es-ES') + ', ' + d.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  }
+  function wasEdited(v){
+    if(!v.updated_at || !v.created_at) return false;
+    return (new Date(v.updated_at) - new Date(v.created_at)) > 5000;
+  }
   function showToast(msg){
     const t = $('toast');
     t.textContent = msg;
@@ -301,7 +311,10 @@
     applyPrecioInheritance();
     updateLiveCalc();
   }
-  $('tripCancelEdit').addEventListener('click', resetTripForm);
+  $('tripCancelEdit').addEventListener('click', ()=>{
+    resetTripForm();
+    switchView('panel');
+  });
 
   $('tripForm').addEventListener('submit', async e=>{
     e.preventDefault();
@@ -340,8 +353,10 @@
       renderHistorial();
       renderPanel();
       checkMaintAlert();
-      showToast(editingId ? 'Viaje actualizado' : 'Viaje guardado');
+      const fueEdicion = editingId !== null;
+      showToast(fueEdicion ? 'Viaje actualizado' : 'Viaje guardado');
       resetTripForm();
+      if(fueEdicion) switchView('panel');
     }catch(err){
       showToast('Error al guardar: ' + err.message);
     }finally{ btn.disabled = false; }
@@ -619,6 +634,7 @@
           <div>
             <span class="entry-date">${formatDate(v.fecha)}</span> ·
             <span class="entry-client">${escapeHtml(clientName(v.cliente_id))}</span>
+            ${wasEdited(v) ? `<span class="edited-badge" title="${formatDateTime(v.updated_at)}">✏️ Editado</span>` : ''}
             ${v.motivo ? `<div class="entry-motivo">${escapeHtml(v.motivo)}</div>` : ''}
           </div>
           <div class="entry-actions">
@@ -890,6 +906,7 @@
               <span class="entry-date">${formatDate(ultimo.fecha)}</span> ·
               <span class="entry-client">${escapeHtml(clientName(ultimo.cliente_id))}</span>
               ${ultimo.motivo ? `<div class="entry-motivo">${escapeHtml(ultimo.motivo)}</div>` : ''}
+              ${wasEdited(ultimo) ? `<span class="edited-badge" title="${formatDateTime(ultimo.updated_at)}">✏️ Editado</span>` : ''}
             </div>
           </div>
           <div class="entry-grid">
