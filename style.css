@@ -79,6 +79,9 @@ input,select,textarea{font-family:inherit;}
 }
 .sidebar-nav button:hover{background:var(--panel-raised);color:var(--ink);}
 .sidebar-nav button.active{background:var(--brass-dim);color:var(--brass-bright);font-weight:600;box-shadow:inset 2px 0 0 var(--brass);}
+.sidebar-nav button.nav-cta{background:var(--brass);color:#171208;font-weight:700;margin-bottom:6px;box-shadow:none;}
+.sidebar-nav button.nav-cta:hover{background:var(--brass-bright);color:#171208;}
+.sidebar-nav button.nav-cta.active{background:var(--brass-bright);color:#171208;box-shadow:none;}
 .sidebar-foot{padding:16px 22px;border-top:1px solid var(--steel-line);font-size:12.5px;color:var(--ink-dim);}
 .sidebar-foot .who{font-weight:600;color:var(--ink);margin-bottom:8px;}
 .sidebar-foot .role-badge{
@@ -131,6 +134,7 @@ button.ghost:hover{border-color:var(--brass);color:var(--brass-bright);}
 .live-calc{background:var(--panel-raised);border:1px solid var(--steel-line-soft);border-radius:8px;padding:14px;margin:16px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .live-calc .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim);font-family:'JetBrains Mono',monospace;display:block;}
 .live-calc .v{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:16px;color:var(--brass-bright);display:block;}
+.form-note{background:var(--teal-dim);border:1px solid rgba(79,184,172,.3);color:var(--teal-bright);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:16px;}
 
 /* Ledger / historial */
 .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}

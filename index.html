@@ -78,7 +78,7 @@
     </div>
     <nav class="sidebar-nav">
       <button class="active" data-view="panel">◎ Panel</button>
-      <button data-view="nuevo-viaje">⛵ Nuevo viaje</button>
+      <button class="nav-cta" data-view="nuevo-viaje">⛵ Nuevo viaje</button>
       <button data-view="repostajes">⛽ Repostajes</button>
       <button data-view="historial">📖 Historial</button>
       <button data-view="clientes">👥 Clientes</button>
@@ -140,58 +140,67 @@
               <select id="tCliente" required></select>
             </div>
           </div>
-          <div class="field">
-            <label>Motivo de la salida</label>
-            <input type="text" id="tMotivo" placeholder="Ej. Salida turística, pesca, mantenimiento…">
-          </div>
 
-          <div class="divider-label">Navegación</div>
-          <div class="row2">
-            <div class="field"><label>Millas navegadas</label><input type="number" step="0.1" id="tMillas" placeholder="nm"></div>
-            <div class="field">
-              <label>Estado de la mar</label>
-              <select id="tEstadoMar">
-                <option value="">Sin especificar</option>
-                <option value="Calma (espejo)">Calma (espejo)</option>
-                <option value="Rizada">Rizada</option>
-                <option value="Marejadilla">Marejadilla</option>
-                <option value="Marejada">Marejada</option>
-                <option value="Fuerte marejada">Fuerte marejada</option>
-                <option value="Gruesa">Gruesa</option>
-                <option value="Muy gruesa">Muy gruesa</option>
-                <option value="Arbolada / Montañosa">Arbolada / Montañosa</option>
-              </select>
-            </div>
-          </div>
-          <div class="row2">
-            <div class="field"><label>RPM promedio del motor</label><input type="number" step="1" id="tRpmProm" placeholder="rpm"></div>
-            <div class="field"><label>Velocidad promedio</label><input type="number" step="0.1" id="tVelProm" placeholder="nudos"></div>
-          </div>
-
-          <div class="divider-label">Motor</div>
+          <div class="divider-label">Lecturas iniciales</div>
           <div class="row2">
             <div class="field"><label>Horas iniciales de motor</label><input type="number" step="0.1" id="tMotorIni"></div>
-            <div class="field"><label>Horas finales de motor</label><input type="number" step="0.1" id="tMotorFin"></div>
-          </div>
-
-          <div class="divider-label">Generador</div>
-          <div class="row2">
             <div class="field"><label>Horas iniciales de generador</label><input type="number" step="0.1" id="tGenIni"></div>
-            <div class="field"><label>Horas finales de generador</label><input type="number" step="0.1" id="tGenFin"></div>
-          </div>
-
-          <div class="divider-label">Combustible</div>
-          <div class="row2">
-            <div class="field"><label>Litros al inicio del viaje</label><input type="number" step="0.1" id="tCombIni"><div class="hint" id="combIniHint"></div></div>
-            <div class="field"><label>Litros al fin del viaje</label><input type="number" step="0.1" id="tCombFin"></div>
           </div>
           <div class="field">
-            <label>Precio del combustible (€/litro)</label>
-            <input type="number" step="0.001" id="tPrecio" placeholder="Precio de hoy">
-            <div class="hint" id="precioHint">Se guarda el precio de ese día, así el histórico no cambia si el precio sube o baja.</div>
+            <label>Litros al inicio del viaje</label>
+            <input type="number" step="0.1" id="tCombIni">
+            <div class="hint" id="combIniHint"></div>
           </div>
 
-          <div class="live-calc">
+          <div class="form-note" id="tripQuickHint">
+            Con esto basta para registrar la salida. Cuando termines, edita este viaje para añadir motivo, millas, horas y litros finales.
+          </div>
+
+          <div id="tripDetailFields">
+            <div class="field">
+              <label>Motivo de la salida</label>
+              <input type="text" id="tMotivo" placeholder="Ej. Salida turística, pesca, mantenimiento…">
+            </div>
+
+            <div class="divider-label">Navegación</div>
+            <div class="row2">
+              <div class="field"><label>Millas navegadas</label><input type="number" step="0.1" id="tMillas" placeholder="nm"></div>
+              <div class="field">
+                <label>Estado de la mar</label>
+                <select id="tEstadoMar">
+                  <option value="">Sin especificar</option>
+                  <option value="Calma (espejo)">Calma (espejo)</option>
+                  <option value="Rizada">Rizada</option>
+                  <option value="Marejadilla">Marejadilla</option>
+                  <option value="Marejada">Marejada</option>
+                  <option value="Fuerte marejada">Fuerte marejada</option>
+                  <option value="Gruesa">Gruesa</option>
+                  <option value="Muy gruesa">Muy gruesa</option>
+                  <option value="Arbolada / Montañosa">Arbolada / Montañosa</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>RPM promedio del motor</label><input type="number" step="1" id="tRpmProm" placeholder="rpm"></div>
+              <div class="field"><label>Velocidad promedio</label><input type="number" step="0.1" id="tVelProm" placeholder="nudos"></div>
+            </div>
+
+            <div class="divider-label">Lecturas finales</div>
+            <div class="row2">
+              <div class="field"><label>Horas finales de motor</label><input type="number" step="0.1" id="tMotorFin"></div>
+              <div class="field"><label>Horas finales de generador</label><input type="number" step="0.1" id="tGenFin"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Litros al fin del viaje</label><input type="number" step="0.1" id="tCombFin"></div>
+              <div class="field">
+                <label>Precio del combustible (€/litro)</label>
+                <input type="number" step="0.001" id="tPrecio" placeholder="Precio de hoy">
+                <div class="hint" id="precioHint">Se guarda el precio de ese día, así el histórico no cambia si el precio sube o baja.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="live-calc" id="tripLiveCalc">
             <div><span class="k">Horas motor</span><span class="v" id="calcMotor">—</span></div>
             <div><span class="k">Horas generador</span><span class="v" id="calcGen">—</span></div>
             <div><span class="k">Consumo</span><span class="v" id="calcConsumo">—</span></div>
@@ -199,7 +208,7 @@
           </div>
 
           <div style="display:flex;gap:10px;">
-            <button class="primary" type="submit" id="tripSubmitBtn">Guardar viaje</button>
+            <button class="primary" type="submit" id="tripSubmitBtn">Registrar viaje</button>
             <button class="ghost" type="button" id="tripCancelEdit" style="display:none">✕ Cancelar y volver al inicio</button>
           </div>
         </form>

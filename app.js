@@ -305,8 +305,11 @@
     tripFields.forEach(f=>$(f).value = '');
     $('tFecha').value = new Date().toISOString().slice(0,10);
     $('tripFormTitle').textContent = 'Nuevo viaje';
-    $('tripSubmitBtn').textContent = 'Guardar viaje';
+    $('tripSubmitBtn').textContent = 'Registrar viaje';
     $('tripCancelEdit').style.display = 'none';
+    $('tripDetailFields').style.display = 'none';
+    $('tripLiveCalc').style.display = 'none';
+    $('tripQuickHint').style.display = 'block';
     applyCombIniInheritance();
     applyPrecioInheritance();
     updateLiveCalc();
@@ -338,8 +341,10 @@
       comb_fin: v.combFin === '' ? null : Number(v.combFin),
       precio_litro: v.precioLitro === '' ? null : Number(v.precioLitro)
     };
+    const viajeAnterior = editingId ? null : ultimoViajeOrdenado();
     const btn = $('tripSubmitBtn');
     btn.disabled = true;
+    let cierreAplicado = false;
     try{
       await withAuthRetry(async ()=>{
         if(editingId){
@@ -347,6 +352,16 @@
         } else {
           payload.created_by = session.user.id;
           await api('/rest/v1/viajes', {method:'POST', body:payload, extraHeaders:restHeaders});
+          if(viajeAnterior){
+            const cierre = {};
+            if(viajeAnterior.motor_fin == null && payload.motor_ini != null) cierre.motor_fin = payload.motor_ini;
+            if(viajeAnterior.gen_fin == null && payload.gen_ini != null) cierre.gen_fin = payload.gen_ini;
+            if(viajeAnterior.comb_fin == null && payload.comb_ini != null) cierre.comb_fin = payload.comb_ini;
+            if(Object.keys(cierre).length){
+              await api(`/rest/v1/viajes?id=eq.${viajeAnterior.id}`, {method:'PATCH', body:cierre});
+              cierreAplicado = true;
+            }
+          }
         }
       });
       await loadViajes();
@@ -354,7 +369,7 @@
       renderPanel();
       checkMaintAlert();
       const fueEdicion = editingId !== null;
-      showToast(fueEdicion ? 'Viaje actualizado' : 'Viaje guardado');
+      showToast(fueEdicion ? 'Viaje actualizado' : (cierreAplicado ? 'Viaje guardado · completadas las lecturas finales del viaje anterior' : 'Viaje guardado'));
       resetTripForm();
       if(fueEdicion) switchView('panel');
     }catch(err){
@@ -388,6 +403,9 @@
     $('tripFormTitle').textContent = 'Editar viaje';
     $('tripSubmitBtn').textContent = 'Actualizar viaje';
     $('tripCancelEdit').style.display = 'inline-block';
+    $('tripDetailFields').style.display = '';
+    $('tripLiveCalc').style.display = '';
+    $('tripQuickHint').style.display = 'none';
     updateLiveCalc();
     document.querySelector('[data-view="nuevo-viaje"]').click();
     window.scrollTo({top:0, behavior:'smooth'});
