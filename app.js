@@ -354,9 +354,9 @@
           await api('/rest/v1/viajes', {method:'POST', body:payload, extraHeaders:restHeaders});
           if(viajeAnterior){
             const cierre = {};
-            if(viajeAnterior.motor_fin == null && payload.motor_ini != null) cierre.motor_fin = payload.motor_ini;
-            if(viajeAnterior.gen_fin == null && payload.gen_ini != null) cierre.gen_fin = payload.gen_ini;
-            if(viajeAnterior.comb_fin == null && payload.comb_ini != null) cierre.comb_fin = payload.comb_ini;
+            if(payload.motor_ini != null) cierre.motor_fin = payload.motor_ini;
+            if(payload.gen_ini != null) cierre.gen_fin = payload.gen_ini;
+            if(payload.comb_ini != null) cierre.comb_fin = payload.comb_ini;
             if(Object.keys(cierre).length){
               await api(`/rest/v1/viajes?id=eq.${viajeAnterior.id}`, {method:'PATCH', body:cierre});
               cierreAplicado = true;
@@ -369,7 +369,7 @@
       renderPanel();
       checkMaintAlert();
       const fueEdicion = editingId !== null;
-      showToast(fueEdicion ? 'Viaje actualizado' : (cierreAplicado ? 'Viaje guardado · completadas las lecturas finales del viaje anterior' : 'Viaje guardado'));
+      showToast(fueEdicion ? 'Viaje actualizado' : (cierreAplicado ? 'Viaje guardado · actualizadas las lecturas finales del viaje anterior' : 'Viaje guardado'));
       resetTripForm();
       if(fueEdicion) switchView('panel');
     }catch(err){
