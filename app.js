@@ -164,9 +164,9 @@
 
   // ---------- NAVEGACIÓN ----------
   function switchView(name){
-    document.querySelectorAll('.sidebar-nav button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-    const navBtn = document.querySelector(`.sidebar-nav button[data-view="${name}"]`);
+    const navBtn = document.querySelector(`.nav-btn[data-view="${name}"]`);
     if(navBtn) navBtn.classList.add('active');
     $('view-'+name).classList.add('active');
     if(name === 'informes') renderInformes();
@@ -176,7 +176,7 @@
     if(name === 'nuevo-viaje' && editingId === null){ applyCombIniInheritance(); applyPrecioInheritance(); }
     window.scrollTo({top:0, behavior:'smooth'});
   }
-  document.querySelectorAll('.sidebar-nav button').forEach(b=>{
+  document.querySelectorAll('.nav-btn').forEach(b=>{
     b.addEventListener('click', ()=>switchView(b.dataset.view));
   });
   document.querySelectorAll('[data-view-link]').forEach(b=>{
