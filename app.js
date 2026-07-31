@@ -634,7 +634,7 @@
           <div>
             <span class="entry-date">${formatDate(v.fecha)}</span> ·
             <span class="entry-client">${escapeHtml(clientName(v.cliente_id))}</span>
-            ${wasEdited(v) ? `asi?<span class="edited-badge">✏️ Editado ${formatDateTime(v.updated_at)}</span>` : ''}
+            ${wasEdited(v) ? `<span class="edited-badge">✏️ Editado ${formatDateTime(v.updated_at)}</span>` : ''}
             ${v.motivo ? `<div class="entry-motivo">${escapeHtml(v.motivo)}</div>` : ''}
           </div>
           <div class="entry-actions">
