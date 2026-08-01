@@ -173,7 +173,7 @@
     if(name === 'configuracion') renderConfiguracion();
     if(name === 'panel') renderPanel();
     if(name === 'repostajes') renderRepostajes();
-    if(name === 'nuevo-viaje' && editingId === null){ applyCombIniInheritance(); applyPrecioInheritance(); }
+    if(name === 'nuevo-viaje' && editingId === null){ applyPrecioInheritance(); }
     window.scrollTo({top:0, behavior:'smooth'});
   }
   document.querySelectorAll('.nav-btn').forEach(b=>{
@@ -260,26 +260,6 @@
     return (typeof viajes !== 'undefined') ? [...viajes].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''))[0] : null;
   }
 
-  function applyCombIniInheritance(){
-    const evento = ultimoEventoCombustible();
-    const hint = $('combIniHint');
-    const input = $('tCombIni');
-    if(evento){
-      input.value = evento.litros;
-      input.disabled = true;
-      hint.innerHTML = `Heredado del ${escapeHtml(evento.detalle)} (${fmt(evento.litros)} L). <a href="#" id="combIniOverrideLink">¿Cifra distinta? Editar a mano</a>`;
-      $('combIniOverrideLink').addEventListener('click', (e)=>{
-        e.preventDefault();
-        input.disabled = false;
-        input.focus();
-        hint.textContent = 'Editando a mano — normalmente este valor debería coincidir con el último viaje o repostaje.';
-      });
-    } else {
-      input.disabled = false;
-      hint.textContent = 'Todavía no hay datos previos: indica el nivel real del depósito.';
-    }
-  }
-
   function applyPrecioInheritance(){
     const ur = ultimoRepostaje();
     const hint = $('precioHint');
@@ -310,7 +290,8 @@
     $('tripDetailFields').style.display = 'none';
     $('tripLiveCalc').style.display = 'none';
     $('tripQuickHint').style.display = 'block';
-    applyCombIniInheritance();
+    $('tCombIni').disabled = false;
+    $('combIniHint').textContent = 'Se copiará como litros finales del viaje anterior al guardar.';
     applyPrecioInheritance();
     updateLiveCalc();
   }
@@ -394,7 +375,7 @@
     $('tGenIni').value = v.gen_ini ?? '';
     $('tGenFin').value = v.gen_fin ?? '';
     $('tCombIni').disabled = false;
-    $('combIniHint').textContent = 'Editando un viaje existente — normalmente este valor debería coincidir con el fin del viaje anterior en la fecha.';
+    $('combIniHint').textContent = 'Editando un viaje existente.';
     $('tCombIni').value = v.comb_ini ?? '';
     $('tCombFin').value = v.comb_fin ?? '';
     $('tPrecio').disabled = false;
@@ -491,7 +472,7 @@
       await loadRepostajes();
       renderRepostajes();
       renderPanel();
-      if(editingId === null) { applyCombIniInheritance(); applyPrecioInheritance(); }
+      if(editingId === null) { applyPrecioInheritance(); }
       showToast('Repostaje eliminado');
     }catch(err){ showToast('Error: '+err.message); }
   }
@@ -525,7 +506,7 @@
       await loadRepostajes();
       renderRepostajes();
       renderPanel();
-      if(editingId === null){ applyCombIniInheritance(); applyPrecioInheritance(); }
+      if(editingId === null){ applyPrecioInheritance(); }
       showToast(editingRepostajeId ? 'Repostaje actualizado' : 'Repostaje guardado');
       resetRepostajeForm();
     }catch(err){
